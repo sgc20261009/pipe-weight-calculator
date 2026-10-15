@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管材重量计算器</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --panel: #1a2233;
+    --panel-2: #141b2b;
+    --text: #e6ecf5;
+    --muted: #8b97ad;
+    --accent: #ff8c42;
+    --accent-2: #4cc9f0;
+    --border: #2a3550;
+    --input-bg: #0d1322;
+    --ok: #6ee7b7;
+    --warn: #fde68a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: linear-gradient(135deg, #0b0f1a 0%, #151d31 100%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 60px;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; letter-spacing: 1px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  .card {
+    width: 100%;
+    max-width: 680px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 26px 28px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  }
+
+  .group { margin-bottom: 18px; }
+  .group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 7px; }
+  .row { display: flex; gap: 14px; }
+  .row .field { flex: 1; }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color .15s;
+  }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  .input-wrap input {
+    flex: 1;
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 18px;
+    padding: 12px 14px;
+  }
+  .unit {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 0 12px;
+    user-select: none;
+  }
+
+  .mat {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .mat select {
+    flex: 1;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 15px;
+    outline: none;
+  }
+  .mat .rho {
+    color: var(--muted);
+    font-size: 12px;
+    min-width: 70px;
+    text-align: right;
+    padding-top: 9px;
+  }
+  .mat .rho b { color: var(--accent-2); font-size: 14px; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .hint .real { color: var(--ok); }
+
+  .btn {
+    width: 100%;
+    background: linear-gradient(90deg, var(--accent), #ff6b3d);
+    color: #1a0f04;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 13px;
+    cursor: pointer;
+    transition: filter .15s;
+    margin-top: 22px;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { filter: brightness(.92); }
+
+  /* result */
+  .result {
+    margin-top: 24px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+  }
+  .result.show { display: block; animation: pop .25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .result .title { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .main-num { font-size: 38px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .main-num .u { font-size: 18px; color: var(--muted); font-weight: 600; margin-left: 4px; }
+  .type-tag { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(76,201,240,.15); color: var(--accent-2); margin-left: 8px; vertical-align: middle; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+  .cell { background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .cell .k { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .cell .v { font-size: 16px; font-weight: 600; color: var(--text); }
+  .formula { margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.6; border-top: 1px dashed var(--border); padding-top: 12px; }
+  .formula code { color: var(--accent-2); }
+
+  .error { color: #ff8080; font-size: 13px; margin-top: 10px; display: none; }
+
+  @media (max-width: 520px) {
+    .row { flex-direction: column; gap: 12px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <h1>🔩 管材重量计算器</h1>
+  <div class="sub">输入外径 / 内径 / 长度，自动按材料密度计算重量</div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <div class="group">
+          <label for="dOuter">外径 D（mm）</label>
+          <div class="input-wrap">
+            <input id="dOuter" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            <span class="unit">mm</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="group">
+          <label for="dInner">内径 d（mm）</label>
+          <div class="input-wrap">
+            <input id="dInner" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+            <span class="unit">mm</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label for="len">长度 L（mm）</label>
+      <div class="input-wrap">
+        <input id="len" type="number" inputmode="decimal" min="0" step="any" placeholder="0">
+        <span class="unit">mm</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <label for="material">材料</label>
+      <div class="mat">
+        <select id="material">
+          <option value="7.85" selected>碳钢 / 合金钢（ρ ≈ 7.85 g/cm³）</option>
+          <option value="7.87">不锈钢（ρ ≈ 7.87 g/cm³）</option>
+          <option value="7.14">黄铜（ρ ≈ 7.14 g/cm³）</option>
+          <option value="2.70">铝 / 铝合金（ρ ≈ 2.70 g/cm³）</option>
+          <option value="2.70">铝合金（ρ ≈ 2.70 g/cm³）</option>
+          <option value="8.89">铜 / 紫铜（ρ ≈ 8.89 g/cm³）</option>
+          <option value="8.89">紫铜（ρ ≈ 8.89 g/cm³）</option>
+          <option value="8.50">青铜（ρ ≈ 8.50 g/cm³）</option>
+          <option value="19.3">金（ρ ≈ 19.3 g/cm³）</option>
+        </select>
+        <div class="rho">ρ = <b><span id="rhoOut">7.85</span></b> g/cm³</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      💡 <span class="real">内径填 0 时自动按实心圆钢计算</span>；内径 &gt; 外径 时报错。
+    </div>
+    <div class="error" id="errMsg"></div>
+
+    <button class="btn" id="calcBtn">计 算 重 量</button>
+
+    <div class="result" id="result">
+      <div class="title">计算结果</div>
+      <div class="main-num">
+        <span id="wKg">0</span><span class="u">kg</span><span class="type-tag" id="typeTag">管材</span>
+      </div>
+      <div class="grid">
+        <div class="cell"><div class="k">截面积</div><div class="v" id="areaOut">—</div></div>
+        <div class="cell"><div class="k">体积</div><div class="v" id="volOut">—</div></div>
+        <div class="cell"><div class="k">线密度（每米）</div><div class="v" id="perMeter">—</div></div>
+        <div class="cell"><div class="k">重量（吨）</div><div class="v" id="wT">—</div></div>
+      </div>
+      <div class="formula">
+        公式：W = <code>π/4 × (D² − d²) × L × ρ ÷ 1000</code>　（mm、g/cm³ → kg）<br>
+        实心时 d=0：W = <code>π/4 × D² × L × ρ ÷ 1000</code>
+      </div>
+    </div>
+  </div>
+
+<script>
+const el = id => document.getElementById(id);
+const materialSel = el('material');
+const rhoOut = el('rhoOut');
+
+materialSel.addEventListener('change', () => {
+  rhoOut.textContent = materialSel.value;
+});
+
+el('calcBtn').addEventListener('click', calc);
+
+// 输入时回车也可触发
+['dOuter','dInner','len'].forEach(id => {
+  el(id).addEventListener('keydown', e => { if (e.key === 'Enter') calc(); });
+});
+
+function calc() {
+  const errMsg = el('errMsg');
+  const D = parseFloat(el('dOuter').value);
+  const d = parseFloat(el('dInner').value);
+  const L = parseFloat(el('len').value);
+  const rho = parseFloat(materialSel.value);
+
+  // 校验
+  let err = '';
+  if (isNaN(D) || isNaN(d) || isNaN(L)) {
+    err = '请完整输入外径、内径、长度';
+  } else if (D < 0 || d < 0 || L <= 0) {
+    err = '外径/内径不能为负，长度必须大于 0';
+  } else if (D === 0) {
+    err = '外径不能为 0';
+  } else if (d > D) {
+    err = '内径不能大于外径';
+  }
+
+  if (err) {
+    errMsg.textContent = '⚠ ' + err;
+    errMsg.style.display = 'block';
+    el('result').classList.remove('show');
+    return;
+  }
+  errMsg.style.display = 'none';
+
+  const D2 = D * D;
+  const d2 = d * d;
+  // 截面积 mm²
+  const area = Math.PI / 4 * (D2 - d2);
+  // 体积 cm³ = mm³ / 1000
+  const volCM3 = area * L / 1000;
+  // 重量 kg = cm³ * g/cm³ / 1000
+  const kg = volCM3 * rho / 1000;
+
+  const isSolid = (d === 0);
+  const areaCm2 = area / 100;
+
+  el('wKg').textContent = fmt(kg);
+  el('wT').textContent = fmt(kg / 1000, 4);
+  el('areaOut').textContent = fmt(area, 3) + ' mm²（' + fmt(areaCm2, 4) + ' cm²）';
+  el('volOut').textContent = fmt(volCM3, 3) + ' cm³';
+  // 每米重量 kg/m：取 1m 长度
+  const perMeter = (Math.PI / 4 * (D2 - d2) * 1000 * rho) / 1000000; // mm²*mm*ρ -> /1e6
+  el('perMeter').textContent = fmt(perMeter, 4) + ' kg/m';
+  el('typeTag').textContent = isSolid ? '实心' : '管材';
+  el('typeTag').style.background = isSolid ? 'rgba(255,140,66,.15)' : 'rgba(76,201,240,.15)';
+  el('typeTag').style.color = isSolid ? 'var(--accent)' : 'var(--accent-2)';
+
+  el('result').classList.add('show');
+}
+
+function fmt(n, dec = 4) {
+  if (!isFinite(n)) return '0';
+  // 自动：整数就显示整数，否则按精度
+  if (Math.abs(n) >= 100 && dec >= 4) return n.toFixed(2);
+  if (Math.abs(n) >= 10 && dec >= 4) return n.toFixed(3);
+  return n.toFixed(dec);
+}
+</script>
+</body>
+</html>
